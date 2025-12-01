@@ -4,14 +4,13 @@ fn parse(input: &str) -> Vec<i32> {
     input
         .lines()
         .map(|line| {
-            let mut line = line.chars();
-            let sign = line.next().expect("missing sign");
-            let sign = match sign {
-                'L' => -1,
-                'R' => 1,
+            let (dir, number) = line.split_at(1);
+            let sign = match dir {
+                "L" => -1,
+                "R" => 1,
                 _ => panic!("invalid sign"),
             };
-            sign * line.as_str().parse::<i32>().expect("invalid number")
+            sign * number.parse::<i32>().expect("invalid number")
         })
         .collect()
 }
