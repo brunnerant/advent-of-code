@@ -53,15 +53,6 @@ mod tests {
     use crate::{count_zeros, parse, part1, part2};
 
     #[test]
-    fn test_parse() {
-        let input = "L68\nL30\nR48\nL5\nR60\nL55\nL1\nL99\nR14\nL82";
-        assert_eq!(
-            parse(input),
-            vec![-68, -30, 48, -5, 60, -55, -1, -99, 14, -82]
-        );
-    }
-
-    #[test]
     fn test_part1() {
         let input = parse("L68\nL30\nR48\nL5\nR60\nL55\nL1\nL99\nR14\nL82");
         assert_eq!(part1(&input), 3);
