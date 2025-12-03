@@ -1,14 +1,14 @@
+use itertools::Itertools;
+
 const INPUT: &str = include_str!("../../assets/day02.txt");
 
 type Input = Vec<(usize, usize)>;
 
 fn parse(input: &str) -> Input {
     input
-        .split(",")
-        .map(|pair| {
-            let (a, b) = pair.split_once("-").unwrap();
-            (a.parse().unwrap(), b.parse().unwrap())
-        })
+        .split([',', '-'])
+        .map(|x| x.parse().unwrap())
+        .tuples()
         .collect()
 }
 
