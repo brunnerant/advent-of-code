@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 const INPUT: &str = include_str!("../../assets/day03.txt");
 
 type Input = Vec<Vec<u8>>;
@@ -11,20 +9,38 @@ fn parse(input: &str) -> Input {
         .collect()
 }
 
+fn best_ndigits(digits: &[u8], n: usize) -> usize {
+    assert!(digits.len() >= n);
+    let mut result = 0;
+    let mut start = 0;
+    // i represents the remaining number of digits
+    for i in (0..n).rev() {
+        let mut best_idx = start;
+        for j in start + 1..digits.len() - i {
+            if digits[j] > digits[best_idx] {
+                best_idx = j;
+            }
+        }
+        start = best_idx + 1;
+        result = result * 10 + digits[best_idx] as usize;
+    }
+    result
+}
+
 fn part1(input: &Input) -> usize {
     let mut result = 0;
     for line in input {
-        assert!(line.len() >= 2);
-        let i = line.len() - 2 - line[..line.len() - 1].iter().rev().position_max().unwrap();
-        let j = line[i + 1..].iter().max().unwrap();
-        let i = line[i];
-        result += (10 * i + j) as usize;
+        result += best_ndigits(line, 2);
     }
     result
 }
 
 fn part2(input: &Input) -> usize {
-    unimplemented!()
+    let mut result = 0;
+    for line in input {
+        result += best_ndigits(line, 12);
+    }
+    result
 }
 
 pub fn main() {
@@ -45,7 +61,7 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        let input = parse("");
-        assert_eq!(part2(&input), 42);
+        let input = parse("987654321111111\n811111111111119\n234234234234278\n818181911112111");
+        assert_eq!(part2(&input), 3121910778619);
     }
 }
