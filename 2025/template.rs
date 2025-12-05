@@ -25,12 +25,6 @@ mod tests {
     use crate::{parse, part1, part2};
 
     #[test]
-    fn test_parse() {
-        let input = "";
-        assert_eq!(parse(input), ());
-    }
-
-    #[test]
     fn test_part1() {
         let input = parse("");
         assert_eq!(part1(&input), 42);
