@@ -6,10 +6,13 @@ type Input = (Vec<(usize, usize)>, Vec<usize>);
 
 fn parse(input: &str) -> Input {
     let mut lines = input.lines();
-    let mut intervals = lines.take_while_ref(|l| !l.is_empty()).map(|l| {
-        let (a, b) = l.split_once('-').unwrap();
-        (a.parse::<usize>().unwrap(), b.parse::<usize>().unwrap())
-    }).collect();
+    let mut intervals = lines
+        .take_while_ref(|l| !l.is_empty())
+        .map(|l| {
+            let (a, b) = l.split_once('-').unwrap();
+            (a.parse::<usize>().unwrap(), b.parse::<usize>().unwrap())
+        })
+        .collect();
     let queries = lines.skip(1).map(|l| l.parse::<usize>().unwrap()).collect();
     merge_overlaps(&mut intervals);
     (intervals, queries)
