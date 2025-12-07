@@ -1,6 +1,6 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
-use aoc2025::grid::Grid;
+use aoc2025::{grid::Grid, topo::Topo};
 
 const INPUT: &str = include_str!("../../assets/day07.txt");
 
@@ -56,27 +56,53 @@ fn part1((grid, x, y): &Input) -> usize {
 }
 
 fn part2((grid, x, y): &Input) -> usize {
+    // Gather the topology of the particles paths so that we can compute the final answer in topological order
     let mut grid = grid.clone();
-    let mut num_trajectories = 0;
-    let mut trajectories = vec![(*x, *y + 1)];
-    while let Some((x, y)) = trajectories.pop() {
+    let mut topo = Topo::new();
+    let mut to_process = BTreeSet::new();
+    to_process.insert((*x, *y + 1));
+    while let Some((x, y)) = to_process.pop_first() {
         if y >= grid.height || x >= grid.width {
-            num_trajectories += 1;
             continue;
         }
         match grid[(x, y)] {
-            Cell::Empty | Cell::Beam => {
-                trajectories.push((x, y + 1));
+            Cell::Empty => {
+                topo.add_edge((x, y), (x, y + 1));
+                to_process.insert((x, y + 1));
                 grid[(x, y)] = Cell::Beam;
             }
             Cell::Splitter => {
-                trajectories.push((x.wrapping_sub(1), y));
-                trajectories.push((x + 1, y));
+                topo.add_edge((x, y), (x.wrapping_sub(1), y));
+                topo.add_edge((x, y), (x + 1, y));
+                to_process.insert((x.wrapping_sub(1), y));
+                to_process.insert((x + 1, y));
             }
             _ => {}
         }
     }
-    num_trajectories
+
+    let mut cell_count = HashMap::new();
+    let mut total_count = 0;
+    cell_count.insert((*x, *y + 1), 1);
+    for (x, y) in topo.sort().unwrap() {
+        let c = cell_count[&(x, y)];
+        if y >= grid.height || x >= grid.width {
+            // add exiting particles to the total count
+            total_count += c;
+            continue;
+        }
+        match grid[(x, y)] {
+            Cell::Beam => {
+                *cell_count.entry((x, y + 1)).or_default() += c;
+            }
+            Cell::Splitter => {
+                *cell_count.entry((x.wrapping_sub(1), y)).or_default() += c;
+                *cell_count.entry((x + 1, y)).or_default() += c;
+            }
+            _ => {}
+        }
+    }
+    total_count
 }
 
 pub fn main() {

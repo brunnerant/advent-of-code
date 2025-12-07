@@ -10,17 +10,23 @@ pub struct Topo<N> {
     outgoing: HashMap<usize, HashSet<usize>>,
 }
 
+impl<N> Default for Topo<N> {
+    fn default() -> Self {
+        Self {
+            nodes: Default::default(),
+            node_idx: Default::default(),
+            incoming: Default::default(),
+            outgoing: Default::default(),
+        }
+    }
+}
+
 impl<N> Topo<N>
 where
     N: Copy + Eq + Hash,
 {
     pub fn new() -> Self {
-        Self {
-            nodes: Vec::new(),
-            node_idx: HashMap::new(),
-            incoming: HashMap::new(),
-            outgoing: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn add_edge(&mut self, a: N, b: N) {
@@ -46,17 +52,15 @@ where
         let empty = HashSet::new();
         while let Some(n) = no_incoming.pop() {
             result.push(n);
-            dbg!(n);
             for &m in self.outgoing.get(&n).unwrap_or(&empty) {
-                self.incoming.get_mut(&m).map(|incoming| {
-                    if incoming.is_empty() {
-                        return;
-                    }
+                if let Some(incoming) = self.incoming.get_mut(&m)
+                    && !incoming.is_empty()
+                {
                     incoming.remove(&n);
                     if incoming.is_empty() {
                         no_incoming.push(m);
                     }
-                });
+                };
             }
         }
         (result.len() == self.nodes.len()).then(|| result.into_iter().map(move |i| self.nodes[i]))
