@@ -6,8 +6,8 @@ use std::{
 pub struct Topo<N> {
     nodes: Vec<N>,
     node_idx: HashMap<N, usize>,
-    incoming: HashMap<usize, HashSet<usize>>,
-    outgoing: HashMap<usize, HashSet<usize>>,
+    incoming: Vec<HashSet<usize>>,
+    outgoing: Vec<HashSet<usize>>,
 }
 
 impl<N> Default for Topo<N> {
@@ -32,35 +32,38 @@ where
     pub fn add_edge(&mut self, a: N, b: N) {
         let a = self.get_node(a);
         let b = self.get_node(b);
-        self.incoming.entry(b).or_default().insert(a);
-        self.outgoing.entry(a).or_default().insert(b);
+        self.incoming[b].insert(a);
+        self.outgoing[a].insert(b);
     }
 
     fn get_node(&mut self, n: N) -> usize {
         *self.node_idx.entry(n).or_insert_with(|| {
             let idx = self.nodes.len();
             self.nodes.push(n);
+            self.incoming.push(HashSet::new());
+            self.outgoing.push(HashSet::new());
             idx
         })
     }
 
     pub fn sort(mut self) -> Option<impl Iterator<Item = N>> {
         let mut result = Vec::with_capacity(self.nodes.len());
-        let mut no_incoming: Vec<_> = (0..self.nodes.len())
-            .filter(|i| self.incoming.get(i).map(|ns| ns.is_empty()).unwrap_or(true))
+        let mut no_incoming: Vec<_> = self
+            .incoming
+            .iter()
+            .enumerate()
+            .filter_map(|(i, ns)| ns.is_empty().then_some(i))
             .collect();
-        let empty = HashSet::new();
         while let Some(n) = no_incoming.pop() {
             result.push(n);
-            for &m in self.outgoing.get(&n).unwrap_or(&empty) {
-                if let Some(incoming) = self.incoming.get_mut(&m)
-                    && !incoming.is_empty()
-                {
-                    incoming.remove(&n);
-                    if incoming.is_empty() {
-                        no_incoming.push(m);
-                    }
-                };
+            for &m in &self.outgoing[n] {
+                if self.incoming[m].is_empty() {
+                    continue;
+                }
+                self.incoming[m].remove(&n);
+                if self.incoming[m].is_empty() {
+                    no_incoming.push(m);
+                }
             }
         }
         (result.len() == self.nodes.len()).then(|| result.into_iter().map(move |i| self.nodes[i]))
