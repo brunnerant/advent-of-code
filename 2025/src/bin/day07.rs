@@ -84,7 +84,7 @@ fn part2((grid, x, y): &Input) -> usize {
     let mut cell_count = HashMap::new();
     let mut total_count = 0;
     cell_count.insert((*x, *y + 1), 1);
-    for (x, y) in topo.sort().unwrap() {
+    for (x, y) in topo.sort_flat().unwrap() {
         let c = cell_count[&(x, y)];
         if y >= grid.height || x >= grid.width {
             // add exiting particles to the total count

@@ -5,6 +5,7 @@ use std::{
 
 pub struct Topo<N> {
     nodes: Vec<N>,
+    no_deps: HashSet<usize>,
     node_idx: HashMap<N, usize>,
     incoming: Vec<HashSet<usize>>,
     outgoing: Vec<HashSet<usize>>,
@@ -14,6 +15,7 @@ impl<N> Default for Topo<N> {
     fn default() -> Self {
         Self {
             nodes: Default::default(),
+            no_deps: Default::default(),
             node_idx: Default::default(),
             incoming: Default::default(),
             outgoing: Default::default(),
@@ -29,104 +31,121 @@ where
         Self::default()
     }
 
+    pub fn from_edges(edges: impl IntoIterator<Item = (N, N)>) -> Self {
+        let mut result = Self::new();
+        for (a, b) in edges {
+            result.add_edge(a, b);
+        }
+        result
+    }
+
     pub fn add_edge(&mut self, a: N, b: N) {
         let a = self.get_node(a);
         let b = self.get_node(b);
         self.incoming[b].insert(a);
         self.outgoing[a].insert(b);
+        self.no_deps.remove(&b);
     }
 
     fn get_node(&mut self, n: N) -> usize {
         *self.node_idx.entry(n).or_insert_with(|| {
             let idx = self.nodes.len();
             self.nodes.push(n);
+            self.no_deps.insert(idx);
             self.incoming.push(HashSet::new());
             self.outgoing.push(HashSet::new());
             idx
         })
     }
 
-    pub fn sort(mut self) -> Option<impl Iterator<Item = N>> {
-        let mut result = Vec::with_capacity(self.nodes.len());
-        let mut no_incoming: Vec<_> = self
-            .incoming
-            .iter()
-            .enumerate()
-            .filter_map(|(i, ns)| ns.is_empty().then_some(i))
-            .collect();
-        while let Some(n) = no_incoming.pop() {
-            result.push(n);
+    pub fn num_nodes(&self) -> usize {
+        self.node_idx.len()
+    }
+
+    /// Pops the elements that have no predecessors from the graph
+    pub fn pop(&mut self) -> Vec<N> {
+        let no_incoming: Vec<_> = self.no_deps.iter().copied().collect();
+        for &n in no_incoming.iter() {
             for &m in &self.outgoing[n] {
-                if self.incoming[m].is_empty() {
-                    continue;
-                }
                 self.incoming[m].remove(&n);
                 if self.incoming[m].is_empty() {
-                    no_incoming.push(m);
+                    self.no_deps.insert(m);
                 }
             }
+            self.no_deps.remove(&n);
         }
-        (result.len() == self.nodes.len()).then(|| result.into_iter().map(move |i| self.nodes[i]))
+        no_incoming
+            .into_iter()
+            .map(|i| {
+                let node = self.nodes[i];
+                self.node_idx.remove(&node);
+                node
+            })
+            .collect()
     }
-}
 
-pub fn sort<N: Copy + Eq + Hash>(
-    edges: impl IntoIterator<Item = (N, N)>,
-) -> Option<impl Iterator<Item = N>> {
-    let mut topo = Topo::new();
-    for (a, b) in edges {
-        topo.add_edge(a, b);
+    /// Topologically sorts the graph. The output is grouped in batches
+    /// such that a node in a batch has all its predecessors in previous batches.
+    pub fn sort(mut self) -> Option<Vec<Vec<N>>> {
+        let mut result = Vec::new();
+        while self.num_nodes() > 0 {
+            let batch = self.pop();
+            if batch.is_empty() {
+                return None;
+            } else {
+                result.push(batch);
+            }
+        }
+        Some(result)
     }
-    topo.sort()
+
+    /// Same as `sort` but flattens the nested batches
+    pub fn sort_flat(self) -> Option<Vec<N>> {
+        self.sort().map(|b| b.into_iter().flatten().collect())
+    }
 }
 
 #[cfg(test)]
 mod tests {
-    use itertools::Itertools;
     use std::collections::HashSet;
 
-    use crate::topo::sort;
+    use crate::topo::Topo;
 
     #[test]
     fn test_empty_topo() {
         assert_eq!(
-            sort::<usize>(Vec::<(usize, usize)>::new()).map(|i| i.collect()),
+            Topo::<usize>::from_edges(Vec::<(usize, usize)>::new()).sort_flat(),
             Some(Vec::<usize>::new())
         );
     }
 
     macro_rules! topo {
-        ($($a:literal -> $b:literal),* sorts_to $($c:literal),*) => {
-            assert_eq!(sort([$(($a, $b)),*]).map(|i| i.collect()), Some(vec![$($c),*]))
-        };
-        ($($a:literal -> $b:literal),* sorts_to_prefix $($c:literal),* and_elements $($d:literal),*) => {
-            let prefix = vec![$($c),*];
-            let elems = HashSet::from([$($d),*]);
-            let result = sort([$(($a, $b)),*]);
+        ($($a:literal -> $b:literal),* sorts_to $($($c:literal),*)->*) => {
+            let result = Topo::from_edges([$(($a, $b)),*]).sort();
             assert!(result.is_some());
-            let result: Vec<_> = result.unwrap().collect();
-            assert_eq!(result.iter().copied().take(prefix.len()).collect::<Vec<_>>(), prefix);
-            assert_eq!(HashSet::from_iter(result.iter().copied()), elems);
-        };
-        ($($a:literal -> $b:literal),* sorts_to_suffix $($c:literal),* and_elements $($d:literal),*) => {
-            let suffix = vec![$($c),*];
-            let elems = HashSet::from([$($d),*]);
-            let result = sort([$(($a, $b)),*]);
-            assert!(result.is_some());
-            let result: Vec<_> = result.unwrap().collect();
-            assert_eq!(result.iter().copied().tail(suffix.len()).collect::<Vec<_>>(), suffix);
-            assert_eq!(HashSet::from_iter(result.iter().copied()), elems);
+
+            let result = result.unwrap();
+            let expected = vec![$(HashSet::from([$($c),*])),*];
+            assert_eq!(result.len(), expected.len());
+            for (a, b) in result.into_iter().zip(expected) {
+                let a = HashSet::from_iter(a.into_iter());
+                assert_eq!(a, b);
+            }
         };
         ($($a:literal -> $b:literal),* has_cycle) => {
-            assert!(sort([$(($a, $b)),*]).is_none())
+            assert!(Topo::from_edges([$(($a, $b)),*]).sort().is_none())
         };
     }
 
     #[test]
     fn test_topo() {
-        topo!("a" -> "b", "b" -> "c" sorts_to "a", "b", "c");
-        topo!("a" -> "b", "a" -> "c" sorts_to_prefix "a" and_elements "a", "b", "c");
-        topo!("a" -> "c", "b" -> "c" sorts_to_suffix "c" and_elements "a", "b", "c");
+        topo!("a" -> "b", "b" -> "c" sorts_to "a" -> "b" -> "c");
+        topo!("a" -> "b", "a" -> "c" sorts_to "a" -> "b", "c");
+        topo!("a" -> "c", "b" -> "c" sorts_to "a", "b" -> "c");
+        topo!("a" -> "b", "a" -> "c", "b" -> "d", "c" -> "d" sorts_to "a" -> "b", "c" -> "d");
+        topo!("a" -> "b", "a" -> "c", "b" -> "d" sorts_to "a" -> "b", "c" -> "d");
+        topo!("a" -> "b", "a" -> "c", "b" -> "d", "c" -> "e" sorts_to "a" -> "b", "c" -> "d", "e");
+        topo!("a" -> "b", "a" -> "c", "b" -> "d", "c" -> "e", "d" -> "e" sorts_to "a" -> "b", "c" -> "d" -> "e");
         topo!("a" -> "b", "b" -> "c", "c" -> "a" has_cycle);
     }
 }
