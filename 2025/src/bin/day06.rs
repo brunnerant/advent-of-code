@@ -11,7 +11,7 @@ enum Op {
 fn part1(input: &str) -> usize {
     let mut lines = input.lines();
     let numbers: Vec<Vec<_>> = lines
-        .take_while_ref(|l| !l.starts_with(&['+', '*']))
+        .take_while_ref(|l| !l.starts_with(['+', '*']))
         .map(|l| {
             l.trim()
                 .split_ascii_whitespace()
@@ -30,12 +30,12 @@ fn part1(input: &str) -> usize {
         })
         .collect();
 
-    let num_operands = numbers.len();
-    for i in 0..num_operands {
-        assert_eq!(numbers[i].len(), operators.len());
+    for nums in numbers.iter() {
+        assert_eq!(nums.len(), operators.len());
     }
 
     let mut result = 0;
+    let num_operands = numbers.len();
     for (i, op) in operators.into_iter().enumerate() {
         result += match op {
             Op::Add => (0..num_operands).map(|j| numbers[j][i]).sum::<usize>(),
@@ -48,8 +48,8 @@ fn part1(input: &str) -> usize {
 fn part2(input: &str) -> usize {
     let lines: Vec<_> = input.lines().collect();
     let line_length = lines[0].len();
-    for i in 1..lines.len() {
-        assert_eq!(lines[i].len(), line_length);
+    for line in lines.iter().skip(1) {
+        assert_eq!(line.len(), line_length);
     }
 
     // group operators into range [a..b] of characters for operation, and operator type

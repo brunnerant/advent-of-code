@@ -10,7 +10,7 @@ pub struct Grid<T> {
 }
 
 impl<T> Grid<T> {
-    pub fn from_lines(lines: impl Iterator<Item = impl Iterator<Item = T>>) -> Result<Self, ()> {
+    pub fn from_lines(lines: impl Iterator<Item = impl Iterator<Item = T>>) -> Option<Self> {
         let mut cells = Vec::new();
         let mut width = None;
         let mut height = 0;
@@ -20,14 +20,14 @@ impl<T> Grid<T> {
             let line_size = cells.len() - size_before;
             if let Some(w) = width {
                 if w != line_size {
-                    return Err(());
+                    return None;
                 }
             } else {
                 width = Some(line_size);
             }
             height += 1;
         }
-        Ok(Grid {
+        Some(Grid {
             cells,
             width: width.unwrap_or(0),
             height,

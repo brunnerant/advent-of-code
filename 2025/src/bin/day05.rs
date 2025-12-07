@@ -34,7 +34,7 @@ fn merge_overlaps(intervals: &mut Vec<(usize, usize)>) {
     intervals.resize(last_idx + 1, (9, 0));
 }
 
-fn is_in_intervals(intervals: &Vec<(usize, usize)>, query: usize) -> bool {
+fn is_in_intervals(intervals: &[(usize, usize)], query: usize) -> bool {
     let mut i = 0;
     let mut j = intervals.len() - 1;
     while j > i {
