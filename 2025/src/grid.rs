@@ -34,6 +34,12 @@ impl<T> Grid<T> {
         })
     }
 
+    pub fn positions(&self) -> impl Iterator<Item = (usize, usize)> {
+        (0..self.height)
+            .cartesian_product(0..self.width)
+            .map(|(y, x)| (x, y))
+    }
+
     pub fn adjacent_cells(&self, (x, y): (usize, usize)) -> impl Iterator<Item = (usize, usize)> {
         let x0: isize = if x > 0 { -1 } else { 0 };
         let x1: isize = if x < self.width - 1 { 1 } else { 0 };

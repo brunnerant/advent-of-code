@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::BTreeSet;
 
 use aoc2025::grid::Grid;
 use itertools::Itertools;
@@ -20,18 +20,16 @@ fn parse(input: &str) -> Input {
 
 fn part1(input: &Input) -> usize {
     let mut result = 0;
-    for y in 0..input.height {
-        for x in 0..input.width {
-            if !input[(x, y)] {
-                continue;
-            }
-            let num_adjacent = input
-                .adjacent_cells((x, y))
-                .filter(|&(i, j)| input[(i, j)])
-                .count();
-            if num_adjacent < 4 {
-                result += 1;
-            }
+    for (x, y) in input.positions() {
+        if !input[(x, y)] {
+            continue;
+        }
+        let num_adjacent = input
+            .adjacent_cells((x, y))
+            .filter(|&(i, j)| input[(i, j)])
+            .count();
+        if num_adjacent < 4 {
+            result += 1;
         }
     }
     result
@@ -41,11 +39,8 @@ fn part2(input: &Input) -> usize {
     let mut input = input.clone();
     let mut result = 0;
     let mut to_check =
-        HashSet::<(usize, usize)>::from_iter((0..input.width).cartesian_product(0..input.height));
-    while !to_check.is_empty() {
-        let &(x, y) = to_check.iter().next().unwrap();
-        to_check.remove(&(x, y));
-
+        BTreeSet::<(usize, usize)>::from_iter((0..input.width).cartesian_product(0..input.height));
+    while let Some((x, y)) = to_check.pop_first() {
         if !input[(x, y)] {
             continue;
         }
