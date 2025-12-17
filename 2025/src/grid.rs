@@ -10,6 +10,25 @@ pub struct Grid<T> {
 }
 
 impl<T> Grid<T> {
+    pub fn fill_with_elem(width: usize, height: usize, elem: T) -> Self
+    where
+        T: Clone,
+    {
+        Self::fill_with(width, height, |_| elem.clone())
+    }
+
+    pub fn fill_with(width: usize, height: usize, func: impl Fn((usize, usize)) -> T) -> Self {
+        let mut grid = Self {
+            cells: Vec::with_capacity(width * height),
+            width,
+            height,
+        };
+        for pos in grid.positions() {
+            grid.cells.push(func(pos));
+        }
+        grid
+    }
+
     pub fn from_lines(lines: impl Iterator<Item = impl Iterator<Item = T>>) -> Option<Self> {
         let mut cells = Vec::new();
         let mut width = None;
@@ -34,7 +53,7 @@ impl<T> Grid<T> {
         })
     }
 
-    pub fn positions(&self) -> impl Iterator<Item = (usize, usize)> {
+    pub fn positions(&self) -> impl Iterator<Item = (usize, usize)> + use<T> {
         (0..self.height)
             .cartesian_product(0..self.width)
             .map(|(y, x)| (x, y))
