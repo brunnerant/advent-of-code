@@ -69,6 +69,39 @@ impl<T> Grid<T> {
             .filter(|&(i, j)| (i, j) != (0, 0))
             .map(move |(i, j)| (x.wrapping_add_signed(i), y.wrapping_add_signed(j)))
     }
+
+    pub fn swap_cells(&mut self, (x1, y1): (usize, usize), (x2, y2): (usize, usize)) {
+        self.cells.swap(y1 * self.width + x1, y2 * self.width + x2);
+    }
+
+    pub fn swap_rows(&mut self, y1: usize, y2: usize) {
+        for x in 0..self.width {
+            self.swap_cells((x, y1), (x, y2));
+        }
+    }
+
+    pub fn swap_columns(&mut self, x1: usize, x2: usize) {
+        for y in 0..self.height {
+            self.swap_cells((x1, y), (x2, y));
+        }
+    }
+}
+
+impl<T> std::fmt::Display for Grid<T>
+where
+    T: std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for (x, y) in self.positions() {
+            write!(f, "{}", self[(x, y)])?;
+            if x == self.width - 1 {
+                writeln!(f)?;
+            } else {
+                write!(f, " ")?;
+            }
+        }
+        Ok(())
+    }
 }
 
 impl<T> Index<(usize, usize)> for Grid<T> {
