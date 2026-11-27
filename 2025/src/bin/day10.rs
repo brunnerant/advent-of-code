@@ -4,7 +4,6 @@ use std::{
 };
 
 use aoc2025::grid::Grid;
-use good_lp::{Expression, Solution, SolverModel, variable};
 use itertools::Itertools;
 use regex::Regex;
 
@@ -137,7 +136,7 @@ impl ReducedMatrix {
             .map(|i| {
                 (0..m)
                     .filter_map(|j| (elems[(i, j)] != 0).then_some(problem.levels[j]))
-                    .max()
+                    .min()
                     .unwrap()
             })
             .collect();
@@ -182,7 +181,7 @@ impl ReducedMatrix {
                 let g = gcd(pivot.unsigned_abs(), elems[(k, i)].unsigned_abs()) as isize;
                 let a = pivot / g;
                 let b = elems[(k, i)] / g;
-                for j in k..n + 1 {
+                for j in 0..n + 1 {
                     elems[(j, i)] = a * elems[(j, i)] - b * elems[(j, k)];
                 }
             }
@@ -282,37 +281,12 @@ impl ReducedMatrix {
             }
         }
     }
-
-    fn min_solution_ilp(&self) -> usize {
-        let mut problem = good_lp::ProblemVariables::new();
-        let n = self.elems.width - 1;
-        let vars: Vec<_> = (0..n).map(|_| problem.add(variable().min(0).integer())).collect();
-        let mut problem = problem
-            .minimise(vars.iter().sum::<Expression>())
-            .using(good_lp::default_solver);
-        for i in 0..self.elems.height {
-            problem = problem.with(
-                (0..n)
-                    .map(|j| self.elems[(j, i)] as f64 * vars[j])
-                    .sum::<Expression>()
-                    .eq(self.elems[(n, i)] as i32),
-            );
-        }
-        let solution = problem.solve().unwrap();
-        vars.into_iter().map(|v| solution.value(v)).sum::<f64>() as usize
-    }
 }
 
 fn part2(input: &Input) -> usize {
     input
         .iter()
-        .map(|p| {
-            let matrix = ReducedMatrix::new(p).unwrap();
-            let a = matrix.min_solution();
-            let b = matrix.min_solution_ilp();
-            assert_eq!(a, b, "{:?}", p);
-            b
-        })
+        .map(|p| ReducedMatrix::new(p).unwrap().min_solution())
         .sum()
 }
 
